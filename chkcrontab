@@ -36,8 +36,7 @@ except ImportError:
 def main(argv):
   """main program."""
   parser = ArgumentParser(
-      description='Parse crontab files; check for potential syntax errors.',
-      version=__version__)
+      description='Parse crontab files; check for potential syntax errors.')
   parser.add_argument('crontab', help='crontab file to parse')
   parser.add_argument('-w', '--whitelist', action='append',
       dest='whitelisted_users',
