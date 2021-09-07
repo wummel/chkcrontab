@@ -1075,17 +1075,14 @@ class LogCounter(object):
       1: If there were any warnings but no errors.
       0: If there were no errors or warnings.
     """
-    more_info = 'See http://goo.gl/7XS9q for more info.'
     if self._error_count > 0:
       if not self._quiet:
         print('E: There were %d errors and %d warnings.'
               % (self._error_count, self._warn_count))
-        print(more_info)
       return 2
     elif self._warn_count > 0:
       if not self._quiet:
         print('W: There were %d warnings.' % self._warn_count)
-        print(more_info)
       return 1
     else:
       return 0
