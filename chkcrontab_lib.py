@@ -73,6 +73,7 @@ import pwd
 import re
 import string
 import stat
+import sys
 
 # The following extensions imply further postprocessing or that the slack
 # role was for a cron that allowed dots in cron scripts.
@@ -1117,49 +1118,52 @@ def check_crontab(arguments, log):
     Note: warnings alone will not yield a non-zero exit code.
   """
 
-  # Check if the file even exists.
-  if not os.path.exists(arguments.crontab):
-    log.Warn('File "%s" does not exist.' % arguments.crontab)
-    return log.Summary()
+  if arguments.crontab == "-":
+    check_crontab_file(sys.stdin, arguments, log)
+  else:
+    # Check if the file even exists.
+    if not os.path.exists(arguments.crontab):
+      log.Warn('File "%s" does not exist.' % arguments.crontab)
+      return log.Summary()
 
-  # Add the any specified users to the whitelist
-  #if arguments.whitelisted_users:
-  #  USER_WHITELIST.update(arguments.whitelisted_users)
+    # Check the file name.
+    if re.search('[^A-Za-z0-9_-]', os.path.basename(arguments.crontab)):
+      in_whitelist = False
+      for pattern in FILE_RE_WHITELIST:
+        if pattern.search(os.path.basename(arguments.crontab)):
+          in_whitelist = True
+          break
+      if not in_whitelist:
+        log.Warn('Cron will not process this file - its name must match'
+                 ' [A-Za-z0-9_-]+ .')
 
-  # Check the file name.
-  if re.search('[^A-Za-z0-9_-]', os.path.basename(arguments.crontab)):
-    in_whitelist = False
-    for pattern in FILE_RE_WHITELIST:
-      if pattern.search(os.path.basename(arguments.crontab)):
-        in_whitelist = True
-        break
-    if not in_whitelist:
-      log.Warn('Cron will not process this file - its name must match'
-               ' [A-Za-z0-9_-]+ .')
+    # Check the file permissions.
+    st = os.stat(arguments.crontab)
+    if bool(st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+      log.Error('Cron will not process this file - it is group or world'
+                ' writable. Use "chmod go-w %s"' % arguments.crontab)
 
-  # Check the file permissions.
-  st = os.stat(arguments.crontab)
-  if bool(st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
-    log.Error('Cron will not process this file - it is group or world'
-              ' writable. Use "chmod go-w %s"' % arguments.crontab)
-
-  line_no = 0
-  cron_line_factory = CronLineFactory()
-  with open(arguments.crontab, 'r') as crontab_f:
-    for line in crontab_f:
-      missing_newline = line[-1] != "\n"
-
-      line = line.strip()
-      line_no += 1
-
-      cron_line = cron_line_factory.ParseLine(line,arguments)
-      cron_line.ValidateAndLog(log)
-
-      log.Emit(line_no, line)
-
-      # are we missing a trailing newline?
-      if missing_newline:
-        log.Error('Cron will not process this file - missing trailing newline')
+    with open(arguments.crontab, 'r') as crontab_f:
+      check_crontab_file(crontab_f, arguments, log)
 
   # Summarize the log messages if there were any.
   return log.Summary()
+
+
+def check_crontab_file(crontab_f, arguments, log):
+  line_no = 0
+  cron_line_factory = CronLineFactory()
+  for line in crontab_f:
+    missing_newline = line[-1] != "\n"
+
+    line = line.strip()
+    line_no += 1
+
+    cron_line = cron_line_factory.ParseLine(line,arguments)
+    cron_line.ValidateAndLog(log)
+
+    log.Emit(line_no, line)
+
+    # are we missing a trailing newline?
+    if missing_newline:
+      log.Error('Cron will not process this file - missing trailing newline')
