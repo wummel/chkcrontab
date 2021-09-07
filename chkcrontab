@@ -46,6 +46,9 @@ def main(argv):
       dest='check_passwd', help='disable user lookup')
   parser.add_argument('-q', '--quiet', action='store_true',
       dest='quiet', help='be quiet')
+  parser.add_argument('-u', '--user', action='store_true',
+      dest='is_user_crontab', default=False,
+      help='parse a user-specific crontab without the username field')
   args = parser.parse_args()
 
   if not args.quiet:

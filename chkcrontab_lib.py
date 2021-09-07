@@ -686,20 +686,19 @@ class CronLineTimeAction(object):
   Must be used as a subclass - subclass must implement _CheckTimeField.
   """
 
-  def __init__(self, time_field, user, command, options):
+  def __init__(self, time_field, command):
     self.time_field = time_field
-    self.user = user
     self.command = command
-    self.whitelisted_users = []
-    if hasattr(options, 'whitelisted_users'):
-        self.whitelisted_users = options.whitelisted_users
-    self.check_passwd = True
-    if hasattr(options, 'check_passwd'):
-        self.check_passwd = options.check_passwd
 
   def _CheckTimeField(self, log):
     """Virtual method to be implemented by subclasses to check time field."""
     pass
+
+  def _CheckCmdField(self, log):
+    # Command checks.
+    if self.command.startswith('%') or re.search(r'[^\\]%', self.command):
+      log.LineWarn(log.MSG_BARE_PERCENT, 'A bare % is a line break in'
+                   ' crontab and is commonly not intended.')
 
   def ValidateAndLog(self, log):
     """Validates an @ time spec line and logs any errors and warnings.
@@ -708,31 +707,7 @@ class CronLineTimeAction(object):
       log: A LogCounter instance to record issues.
     """
     self._CheckTimeField(log)
-
-    # User checks.
-    if self.user in self.whitelisted_users:
-      pass
-    elif len(self.user) > 31:
-      log.LineError(log.MSG_INVALID_USER,
-                    'Username too long "%s"' % self.user)
-    elif self.user.startswith('-'):
-      log.LineError(log.MSG_INVALID_USER, 'Invalid username "%s"' % self.user)
-    elif re.search(r'[\s!"#$%&\'()*+,/:;<=>?@[\\\]^`{|}~]', self.user):
-      log.LineError(log.MSG_INVALID_USER, 'Invalid username "%s"' % self.user)
-    elif self.check_passwd:
-      try:
-        pwd.getpwnam(self.user)
-      except KeyError:
-        log.LineWarn(log.MSG_USER_NOT_FOUND,
-                     'User "%s" not found.' % self.user)
-    else:
-        log.LineWarn(log.MSG_USER_NOT_FOUND,
-                     'User "%s" not found.' % self.user)
-
-    # Command checks.
-    if self.command.startswith('%') or re.search(r'[^\\]%', self.command):
-      log.LineWarn(log.MSG_BARE_PERCENT, 'A bare % is a line break in'
-                   ' crontab and is commonly not intended.')
+    self._CheckCmdField(log)
 
 
 class CronLineAt(CronLineTimeAction):
@@ -787,6 +762,57 @@ class CronLineTime(CronLineTimeAction):
                      'Cron will run this every minute for the hours set.')
 
 
+class CronLineUserMixin(object):
+
+  def __init__(self, time_field, user, command, options):
+    super().__init__(time_field, command)
+    self.user = user
+    self.whitelisted_users = []
+    if hasattr(options, 'whitelisted_users'):
+        self.whitelisted_users = options.whitelisted_users
+    self.check_passwd = True
+    if hasattr(options, 'check_passwd'):
+        self.check_passwd = options.check_passwd
+
+  def _CheckUserField(self, log):
+    # User checks.
+    if self.user in self.whitelisted_users:
+      pass
+    elif len(self.user) > 31:
+      log.LineError(log.MSG_INVALID_USER,
+                    'Username too long "%s"' % self.user)
+    elif self.user.startswith('-'):
+      log.LineError(log.MSG_INVALID_USER, 'Invalid username "%s"' % self.user)
+    elif re.search(r'[\s!"#$%&\'()*+,/:;<=>?@[\\\]^`{|}~]', self.user):
+      log.LineError(log.MSG_INVALID_USER, 'Invalid username "%s"' % self.user)
+    elif self.check_passwd:
+      try:
+        pwd.getpwnam(self.user)
+      except KeyError:
+        log.LineWarn(log.MSG_USER_NOT_FOUND,
+                     'User "%s" not found.' % self.user)
+    else:
+        log.LineWarn(log.MSG_USER_NOT_FOUND,
+                     'User "%s" not found.' % self.user)
+
+  def ValidateAndLog(self, log):
+    """Validates an @ time spec line and logs any errors and warnings.
+
+    Args:
+      log: A LogCounter instance to record issues.
+    """
+    super().ValidateAndLog(log)
+    self._CheckUserField(log)
+
+
+class CronLineAtUser(CronLineUserMixin, CronLineAt):
+    pass
+
+
+class CronLineTimeUser(CronLineUserMixin, CronLineTime):
+    pass
+
+
 class CronLineUnknown(object):
   """For unrecognised cron lines."""
 
@@ -817,10 +843,20 @@ class CronLineFactory(object):
     """
     chkcrontab_cmd = re.compile('##*\s*chkcrontab:\s*(.*)=(.*)')
     assignment_line_re = re.compile('[a-zA-Z_][a-zA-Z0-9_]*\s*=(.*)')
-    at_line_re = re.compile('@(\S+)\s+(\S+)\s+(.*)')
     cron_time_field_re = '[\*0-9a-zA-Z,/-]+'
-    time_field_job_line_re = re.compile(
+    # a users own crontab has no user field, since all jobs run under
+    # this specific user anyway
+    has_user_field = not getattr(options, 'is_user_crontab', False)
+    if has_user_field:
+      at_line_re = re.compile('@(\S+)\s+(\S+)\s+(.*)')
+      time_field_job_line_re = re.compile(
         '^\s*(%s)\s+(%s)\s+(%s)\s+(%s)\s+(%s)\s+(\S+)\s+(.*)' %
+        (cron_time_field_re, cron_time_field_re, cron_time_field_re,
+         cron_time_field_re, cron_time_field_re))
+    else:
+      at_line_re = re.compile('@(\S+)\s+(.*)')
+      time_field_job_line_re = re.compile(
+        '^\s*(%s)\s+(%s)\s+(%s)\s+(%s)\s+(%s)\s+(.*)' %
         (cron_time_field_re, cron_time_field_re, cron_time_field_re,
          cron_time_field_re, cron_time_field_re))
 
@@ -840,8 +876,11 @@ class CronLineFactory(object):
 
     match = at_line_re.match(line)
     if match:
-      return CronLineAt(match.groups()[0], match.groups()[1],
-                        match.groups()[2], options)
+      if has_user_field:
+        return CronLineAtUser(match.groups()[0], match.groups()[1],
+                              match.groups()[2], options)
+      else:
+        return CronLineAt(match.groups()[0], match.groups()[1])
 
     # Is this line a cron job specifier?
     match = time_field_job_line_re.match(line)
@@ -853,7 +892,10 @@ class CronLineFactory(object):
           'month': match.groups()[3],
           'day of week': match.groups()[4],
           }
-      return CronLineTime(field, match.groups()[5], match.groups()[6], options)
+      if has_user_field:
+        return CronLineTimeUser(field, match.groups()[5], match.groups()[6], options)
+      else:
+        return CronLineTime(field, match.groups()[5])
 
     return CronLineUnknown()
 
