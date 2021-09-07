@@ -72,7 +72,7 @@ import os
 import pwd
 import re
 import string
-
+import stat
 
 # The following extensions imply further postprocessing or that the slack
 # role was for a cron that allowed dots in cron scripts.
@@ -1136,6 +1136,12 @@ def check_crontab(arguments, log):
     if not in_whitelist:
       log.Warn('Cron will not process this file - its name must match'
                ' [A-Za-z0-9_-]+ .')
+
+  # Check the file permissions.
+  st = os.stat(arguments.crontab)
+  if bool(st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+    log.Error('Cron will not process this file - it is group or world'
+              ' writable. Use "chmod go-w %s"' % arguments.crontab)
 
   line_no = 0
   cron_line_factory = CronLineFactory()

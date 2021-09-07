@@ -22,6 +22,7 @@ import os
 import re
 import string
 import sys
+import stat
 
 if sys.version_info < (2, 7):
   import unittest2 as unittest
@@ -348,6 +349,22 @@ class CheckCrontabUnitTest(unittest.TestCase):
     args.crontab = os.path.join(BASE_PATH, 'test_crontab.lookup')
     args.check_passwd = False
     self.CheckACrontab(args)
+
+  def testCheckPermissions(self):
+    args = type("", (), {})()
+    args.crontab = os.path.join(BASE_PATH, 'test_crontab.permissions')
+    args.check_passwd = False
+    st = os.stat(args.crontab)
+    try:
+        os.chmod(args.crontab, st.st_mode | stat.S_IWGRP)
+        self.CheckACrontab(args)
+    finally:
+        os.chmod(args.crontab, st.st_mode)
+    try:
+        os.chmod(args.crontab, st.st_mode | stat.S_IWOTH)
+        self.CheckACrontab(args)
+    finally:
+        os.chmod(args.crontab, st.st_mode)
 
 
 if __name__ == '__main__':
