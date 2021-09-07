@@ -29,7 +29,6 @@ __author__ = 'lyda@google.com (Kevin Lyda)'
 import sys
 import chkcrontab_lib as check
 
-from optparse import OptionParser
 from argparse import ArgumentParser
 try:
   from _version import __version__
