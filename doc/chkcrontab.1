@@ -34,18 +34,13 @@ Checks that ranges and sequences are not used for the "day of
 week" and "month" fields.
 .IP \(bu 2
 Reports any bare \fB%\fP in a command.
-.SH BUGS
+.SH EXAMPLES
+\fBchkcrontab /etc/cron.d/certbot\fP
 .sp
-Quite possibly. Report them via the issue tracker at the project
-website:
-.sp
-\fI\%http://code.google.com/p/chkcrontab/issues/list\fP
-.SH SEE ALSO
-.sp
-\fBlint\fP (1)
+\fBcrontab -l | chkcrontab -u -\fP
 .SH RESOURCES
 .sp
-Project website: \fI\%http://code.google.com/p/chkcrontab\fP
+Project website: \fI\%https://github.com/wummel/chkcrontab\fP
 .SH COPYING
 .sp
 Copyright (C) 2012 Kevin Lyda.
