@@ -1,4 +1,4 @@
-include LICENSE OWNERS README.rst
+include LICENSE CHANGELOG README.rst
 include chkcrontab
 include chkcrontab_lib.py
 include setup.py

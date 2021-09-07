@@ -169,7 +169,7 @@ setup(
   cmdclass=cmdclass,
   name='chkcrontab',
   version=VERSION,
-  url='https://gitlab.com/lyda/chkcrontab',
+  url='https://github.com/wummel/chkcrontab',
   author='Kevin Lyda',
   author_email='kevin@phrye.com',
   description='A tool to detect crontab errors',

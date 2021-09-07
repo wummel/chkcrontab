@@ -1,17 +1,6 @@
 ==========
 chkcrontab
 ==========
-.. image:: https://gitlab.ie.suberic.net/kevin/chkcrontab/badges/master/build.svg
-   :target: https://gitlab.ie.suberic.net/kevin/chkcrontab/commits/master
-   :alt: Home build status
-
-.. image:: https://gitlab.ie.suberic.net/kevin/chkcrontab/badges/master/coverage.svg
-   :target: https://gitlab.ie.suberic.net/kevin/chkcrontab/commits/master
-   :alt: Home coverage status
-
-.. image:: https://travis-ci.org/lyda/chkcrontab.png?branch=master
-   :target: https://travis-ci.org/lyda/chkcrontab
-   :alt: Build status
 
 Crontab linter
 ==============
@@ -34,14 +23,6 @@ To see sample output for a bad crontab, run the following::
 See the ``./tests/test_crontab.disable`` crontab for how to disable
 warnings and errors.
 
-Output Description
-~~~~~~~~~~~~~~~~~~
-
-The output of ``chkcrontab`` is described on the `CheckCrontab`_
-wiki page. A link to it appears in the output if there were any
-warnings or errors. It also suggests ways to fix the reported
-issues.
-
 Contributions
 =============
 Contributions are welcome! Please add unit tests for new features
@@ -60,10 +41,7 @@ as ``chkcrontab``. The project page is on `pypi`_:
 
 The source code is available in the following locations:
 
-* Gitlab: https://gitlab.com/lyda/chkcrontab
-* Github: https://github.com/lyda/chkcrontab
-* Bitbucket: https://bitbucket.org/lyda/chkcrontab/
-* Sourceforge: https://sourceforge.net/p/chkcrontab
+* Github: https://github.com/wummel/chkcrontab
 
 Pull requests on any of those platforms or emailed patches are fine.
 Opening issues on gitlab or github is easiest, but I'll check any
@@ -84,8 +62,6 @@ TODO
 * Check for backticks. (why?)
 * Make sure MAILTO and PATH are set (perhaps others?).
 * Add tests for command line.
-* Enable it to parse user crontabs: 
-  https://github.com/lyda/chkcrontab/issues/12
 * Make "acceptable filenames" a configurable thing:
   https://github.com/lyda/chkcrontab/issues/4
 * Packaging: https://github.com/lyda/chkcrontab/issues/13
